@@ -12,6 +12,11 @@ def handler(event: dict, context) -> dict:
     method = event.get('httpMethod', 'GET')
     params = event.get('queryStringParameters') or {}
     shutdown_time = params.get('shutdownTime', '23:30').strip()
+    target_date_str = params.get('targetDate', '2026-03-01').strip()
+    try:
+        y, m, d = [int(x) for x in target_date_str.split('-')]
+    except Exception:
+        y, m, d = 2026, 3, 1
 
     if method == 'OPTIONS':
         return {
@@ -51,7 +56,7 @@ def handler(event: dict, context) -> dict:
         'echo  [1/4] Papka sozdana: %INSTALL_DIR%\r\n'
         '\r\n'
         'set "PS_SCRIPT=%INSTALL_DIR%\\DateFix.ps1"\r\n'
-        '> "%PS_SCRIPT%" echo $targetDate = Get-Date -Year 2026 -Month 3 -Day 1\r\n'
+        f'> "%PS_SCRIPT%" echo $targetDate = Get-Date -Year {y} -Month {m} -Day {d}\r\n'
         '>>"%PS_SCRIPT%" echo Set-Date -Date $targetDate\r\n'
         'echo  [2/4] Skript daty sozdan\r\n'
         '\r\n'
@@ -72,7 +77,7 @@ def handler(event: dict, context) -> dict:
         'echo  ============================================\r\n'
         'echo.\r\n'
         '\r\n'
-        'choice /c YN /m "Ustanovit datu 1 marta 2026 seychas"\r\n'
+        f'choice /c YN /m "Ustanovit datu {d:02d}.{m:02d}.{y} seychas"\r\n'
         'if errorlevel 2 goto end\r\n'
         'powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%PS_SCRIPT%"\r\n'
         'echo  Data ustanovlena.\r\n'
@@ -100,7 +105,7 @@ def handler(event: dict, context) -> dict:
     )
 
     readme = (
-        'DateFix - установка системной даты Windows 11 на 1 марта 2026\r\n'
+        f'DateFix - установка системной даты Windows 11 на {d:02d}.{m:02d}.{y}\r\n'
         '============================================================\r\n'
         '\r\n'
         'СОДЕРЖИМОЕ АРХИВА:\r\n'
@@ -118,7 +123,7 @@ def handler(event: dict, context) -> dict:
         '  - отключает интернет-синхронизацию времени (чтобы дата не сбрасывалась)\r\n'
         '  - добавляет запуск при включении ПК через Планировщик задач\r\n'
         f'  - добавляет ежедневное выключение компьютера в {shutdown_time if shutdown_time else "23:30"}\r\n'
-        '  - при желании сразу ставит дату 1 марта 2026\r\n'
+        f'  - при желании сразу ставит дату {d:02d}.{m:02d}.{y}\r\n'
         '\r\n'
         'КАК УДАЛИТЬ:\r\n'
         '  Запустите "Удалить-DateFix.bat" от имени администратора.\r\n'

@@ -3,16 +3,31 @@ import Icon from '@/components/ui/icon';
 
 const ZIP_URL = 'https://functions.poehali.dev/f06f9a3e-2953-4f70-9281-005e8f7cb7c5';
 
-const TARGET_DATE = new Date(2026, 2, 1);
-
-const formatLong = (d: Date) =>
-  d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+const formatLong = (dateStr: string) => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('ru-RU', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  });
+};
 
 const formatTime = (d: Date) =>
   d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+const Toggle = ({
+  on, onToggle, color = 'bg-primary',
+}: { on: boolean; onToggle: () => void; color?: string }) => (
+  <span
+    onClick={onToggle}
+    className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer ${on ? color : 'bg-muted-foreground/40'}`}
+  >
+    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
+  </span>
+);
+
 const Index = () => {
+  const [targetDate, setTargetDate] = useState('2026-03-01');
   const [applied, setApplied] = useState(false);
+  const [editingDate, setEditingDate] = useState(false);
   const [autostart, setAutostart] = useState(true);
   const [shutdown, setShutdown] = useState(true);
   const [shutdownTime, setShutdownTime] = useState('23:30');
@@ -24,12 +39,15 @@ const Index = () => {
     return () => clearInterval(t);
   }, []);
 
-  const displayDate = applied ? TARGET_DATE : now;
+  useEffect(() => {
+    setApplied(false);
+  }, [targetDate]);
 
   const downloadZip = async () => {
     setDownloading(true);
     try {
       const params = new URLSearchParams({
+        targetDate,
         shutdownTime: shutdown ? shutdownTime : '',
       });
       const res = await fetch(`${ZIP_URL}?${params}`);
@@ -46,6 +64,10 @@ const Index = () => {
       setDownloading(false);
     }
   };
+
+  const displayTime = applied
+    ? (() => { const [y, m, d] = targetDate.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); return formatTime(dt); })()
+    : formatTime(now);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
@@ -75,24 +97,42 @@ const Index = () => {
             <h1 className="font-display text-[1.7rem] leading-tight font-600 text-foreground">
               Системная дата
             </h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Установит дату Windows на 1 марта 2026
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Установит дату Windows при каждом включении ПК
             </p>
 
-            {/* Date display */}
-            <div className="mt-7 mb-8 animate-fade-in">
+            {/* Clock + date display */}
+            <div className="mt-7 mb-6 animate-fade-in">
               <div className="text-5xl font-display font-700 tabular-nums tracking-tight text-foreground">
-                {formatTime(displayDate)}
+                {displayTime}
               </div>
-              <div
-                className={`mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+
+              {/* Date badge — кликабельная */}
+              <button
+                onClick={() => setEditingDate((v) => !v)}
+                className={`mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all hover:brightness-95 active:scale-95 ${
                   applied
                     ? 'bg-primary/15 text-primary'
                     : 'bg-secondary text-secondary-foreground'
                 }`}
               >
                 <Icon name="Calendar" size={14} />
-                {formatLong(displayDate)}
+                {applied ? formatLong(targetDate) : new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                <Icon name="ChevronDown" size={13} className={`transition-transform ${editingDate ? 'rotate-180' : ''}`} />
+              </button>
+
+              {/* Date picker — раскрывается */}
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${editingDate ? 'max-h-24 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'}`}>
+                <div className="flex items-center justify-center gap-3 bg-secondary/60 rounded-2xl px-4 py-3">
+                  <Icon name="CalendarDays" size={15} className="text-muted-foreground shrink-0" />
+                  <span className="text-sm text-muted-foreground">Целевая дата:</span>
+                  <input
+                    type="date"
+                    value={targetDate}
+                    onChange={(e) => { setTargetDate(e.target.value); setEditingDate(false); }}
+                    className="ml-auto bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-display font-600 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
+                  />
+                </div>
               </div>
             </div>
 
@@ -111,7 +151,7 @@ const Index = () => {
               ) : (
                 <>
                   <Icon name="Power" size={19} />
-                  Установить дату
+                  Установить {formatLong(targetDate)}
                 </>
               )}
             </button>
@@ -130,17 +170,12 @@ const Index = () => {
                   <div className="text-xs text-muted-foreground">Запуск при включении ПК</div>
                 </div>
               </div>
-              <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${autostart ? 'bg-primary' : 'bg-muted-foreground/40'}`}>
-                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${autostart ? 'left-6' : 'left-1'}`} />
-              </span>
+              <Toggle on={autostart} onToggle={() => setAutostart(v => !v)} />
             </button>
 
             {/* Shutdown toggle + time picker */}
             <div className="mt-3 rounded-2xl bg-secondary/60 overflow-hidden">
-              <button
-                onClick={() => setShutdown((v) => !v)}
-                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-secondary transition-colors text-left"
-              >
+              <div className="flex items-center justify-between gap-3 px-4 py-3.5">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
                     <Icon name="PowerOff" size={18} className="text-destructive" />
@@ -152,17 +187,10 @@ const Index = () => {
                     </div>
                   </div>
                 </div>
-                <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${shutdown ? 'bg-destructive' : 'bg-muted-foreground/40'}`}>
-                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${shutdown ? 'left-6' : 'left-1'}`} />
-                </span>
-              </button>
+                <Toggle on={shutdown} onToggle={() => setShutdown(v => !v)} color="bg-destructive" />
+              </div>
 
-              {/* Time picker — раскрывается при включённом тогле */}
-              <div
-                className={`overflow-hidden transition-all duration-300 ease-in-out ${
-                  shutdown ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'
-                }`}
-              >
+              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${shutdown ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="px-4 pb-4 pt-1 flex items-center gap-3 border-t border-border/40">
                   <Icon name="Clock" size={15} className="text-muted-foreground shrink-0" />
                   <span className="text-sm text-muted-foreground">Время выключения:</span>
@@ -170,7 +198,6 @@ const Index = () => {
                     type="time"
                     value={shutdownTime}
                     onChange={(e) => setShutdownTime(e.target.value)}
-                    onClick={(e) => e.stopPropagation()}
                     className="ml-auto bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-display font-600 text-foreground focus:outline-none focus:ring-2 focus:ring-destructive/50 cursor-pointer"
                   />
                 </div>
