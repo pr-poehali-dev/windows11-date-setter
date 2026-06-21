@@ -10,6 +10,8 @@ def handler(event: dict, context) -> dict:
     Возвращает архив в формате base64 для скачивания на фронтенде.
     '''
     method = event.get('httpMethod', 'GET')
+    params = event.get('queryStringParameters') or {}
+    shutdown_time = params.get('shutdownTime', '23:30').strip()
 
     if method == 'OPTIONS':
         return {
@@ -60,8 +62,8 @@ def handler(event: dict, context) -> dict:
         'schtasks /create /tn "DateFix" /tr "powershell.exe -NoProfile -ExecutionPolicy Bypass -File \\"%PS_SCRIPT%\\"" /sc onstart /ru "SYSTEM" /rl HIGHEST /f >nul\r\n'
         'echo  [4/5] Dobavleno v avtozagruzku Windows\r\n'
         '\r\n'
-        'schtasks /create /tn "DateFix-Shutdown" /tr "shutdown.exe /s /f /t 0" /sc daily /st 23:30 /ru "SYSTEM" /rl HIGHEST /f >nul\r\n'
-        'echo  [5/5] Vyklyuchenie v 23:30 dobavleno\r\n'
+        f'schtasks /create /tn "DateFix-Shutdown" /tr "shutdown.exe /s /f /t 0" /sc daily /st {shutdown_time if shutdown_time else "23:30"} /ru "SYSTEM" /rl HIGHEST /f >nul\r\n'
+        f'echo  [5/5] Vyklyuchenie v {shutdown_time if shutdown_time else "23:30"} dobavleno\r\n'
         '\r\n'
         'echo.\r\n'
         'echo  ============================================\r\n'
@@ -115,7 +117,7 @@ def handler(event: dict, context) -> dict:
         '  - создаёт папку C:\\DateFix со скриптом\r\n'
         '  - отключает интернет-синхронизацию времени (чтобы дата не сбрасывалась)\r\n'
         '  - добавляет запуск при включении ПК через Планировщик задач\r\n'
-        '  - добавляет ежедневное выключение компьютера в 23:30\r\n'
+        f'  - добавляет ежедневное выключение компьютера в {shutdown_time if shutdown_time else "23:30"}\r\n'
         '  - при желании сразу ставит дату 1 марта 2026\r\n'
         '\r\n'
         'КАК УДАЛИТЬ:\r\n'

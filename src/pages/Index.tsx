@@ -15,6 +15,7 @@ const Index = () => {
   const [applied, setApplied] = useState(false);
   const [autostart, setAutostart] = useState(true);
   const [shutdown, setShutdown] = useState(true);
+  const [shutdownTime, setShutdownTime] = useState('23:30');
   const [now, setNow] = useState(new Date());
   const [downloading, setDownloading] = useState(false);
 
@@ -28,7 +29,10 @@ const Index = () => {
   const downloadZip = async () => {
     setDownloading(true);
     try {
-      const res = await fetch(ZIP_URL);
+      const params = new URLSearchParams({
+        shutdownTime: shutdown ? shutdownTime : '',
+      });
+      const res = await fetch(`${ZIP_URL}?${params}`);
       const { filename, data } = await res.json();
       const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
       const blob = new Blob([bytes], { type: 'application/zip' });
@@ -45,14 +49,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      {/* Ambient Fluent background */}
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/20 blur-[120px]" />
         <div className="absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-[130px]" />
       </div>
 
       <div className="relative w-full max-w-md animate-scale-in">
-        {/* Acrylic card */}
         <div className="rounded-[1.75rem] border border-border/70 bg-card/70 backdrop-blur-2xl shadow-[0_24px_70px_-20px_rgba(0,0,0,0.35)] overflow-hidden">
           {/* Title bar */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
@@ -128,45 +130,52 @@ const Index = () => {
                   <div className="text-xs text-muted-foreground">Запуск при включении ПК</div>
                 </div>
               </div>
-              <span
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-                  autostart ? 'bg-primary' : 'bg-muted-foreground/40'
-                }`}
-              >
-                <span
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                    autostart ? 'left-6' : 'left-1'
-                  }`}
-                />
+              <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${autostart ? 'bg-primary' : 'bg-muted-foreground/40'}`}>
+                <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${autostart ? 'left-6' : 'left-1'}`} />
               </span>
             </button>
 
-            {/* Shutdown toggle */}
-            <button
-              onClick={() => setShutdown((v) => !v)}
-              className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-secondary/60 hover:bg-secondary transition-colors text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
-                  <Icon name="PowerOff" size={18} className="text-destructive" />
+            {/* Shutdown toggle + time picker */}
+            <div className="mt-3 rounded-2xl bg-secondary/60 overflow-hidden">
+              <button
+                onClick={() => setShutdown((v) => !v)}
+                className="w-full flex items-center justify-between gap-3 px-4 py-3.5 hover:bg-secondary transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
+                    <Icon name="PowerOff" size={18} className="text-destructive" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-foreground">Выключение по расписанию</div>
+                    <div className="text-xs text-muted-foreground">
+                      {shutdown ? `Ежедневно в ${shutdownTime}` : 'Отключено'}
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-medium text-foreground">Выключение в 23:30</div>
-                  <div className="text-xs text-muted-foreground">Ежедневно по расписанию</div>
-                </div>
-              </div>
-              <span
-                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
-                  shutdown ? 'bg-destructive' : 'bg-muted-foreground/40'
+                <span className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${shutdown ? 'bg-destructive' : 'bg-muted-foreground/40'}`}>
+                  <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${shutdown ? 'left-6' : 'left-1'}`} />
+                </span>
+              </button>
+
+              {/* Time picker — раскрывается при включённом тогле */}
+              <div
+                className={`overflow-hidden transition-all duration-300 ease-in-out ${
+                  shutdown ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'
                 }`}
               >
-                <span
-                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
-                    shutdown ? 'left-6' : 'left-1'
-                  }`}
-                />
-              </span>
-            </button>
+                <div className="px-4 pb-4 pt-1 flex items-center gap-3 border-t border-border/40">
+                  <Icon name="Clock" size={15} className="text-muted-foreground shrink-0" />
+                  <span className="text-sm text-muted-foreground">Время выключения:</span>
+                  <input
+                    type="time"
+                    value={shutdownTime}
+                    onChange={(e) => setShutdownTime(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="ml-auto bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-display font-600 text-foreground focus:outline-none focus:ring-2 focus:ring-destructive/50 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
 
             {/* Download installer */}
             <button
