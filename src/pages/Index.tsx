@@ -14,6 +14,7 @@ const formatTime = (d: Date) =>
 const Index = () => {
   const [applied, setApplied] = useState(false);
   const [autostart, setAutostart] = useState(true);
+  const [shutdown, setShutdown] = useState(true);
   const [now, setNow] = useState(new Date());
   const [downloading, setDownloading] = useState(false);
 
@@ -135,6 +136,33 @@ const Index = () => {
                 <span
                   className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
                     autostart ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </span>
+            </button>
+
+            {/* Shutdown toggle */}
+            <button
+              onClick={() => setShutdown((v) => !v)}
+              className="mt-3 w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-secondary/60 hover:bg-secondary transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
+                  <Icon name="PowerOff" size={18} className="text-destructive" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">Выключение в 23:30</div>
+                  <div className="text-xs text-muted-foreground">Ежедневно по расписанию</div>
+                </div>
+              </div>
+              <span
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                  shutdown ? 'bg-destructive' : 'bg-muted-foreground/40'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                    shutdown ? 'left-6' : 'left-1'
                   }`}
                 />
               </span>
