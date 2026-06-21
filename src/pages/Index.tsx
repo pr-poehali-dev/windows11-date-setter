@@ -1,15 +1,131 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useEffect } from 'react';
+import Icon from '@/components/ui/icon';
+
+const TARGET_DATE = new Date(2026, 2, 1);
+
+const formatLong = (d: Date) =>
+  d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+const formatTime = (d: Date) =>
+  d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 const Index = () => {
+  const [applied, setApplied] = useState(false);
+  const [autostart, setAutostart] = useState(true);
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const displayDate = applied ? TARGET_DATE : now;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4 color-black text-black">Добро пожаловать!</h1>
-        <p className="text-xl text-gray-600">тут будет отображаться ваш проект</p>
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
+      {/* Ambient Fluent background */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/20 blur-[120px]" />
+        <div className="absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-[130px]" />
       </div>
-      <span className="absolute bottom-8 left-1/2 -translate-x-1/2 inline-block bg-[#FF6637] text-white text-sm px-4 py-2 rounded-full whitespace-nowrap">
-        Подождите 5 минут, Юра создает первую версию проекта с нуля
-      </span>
+
+      <div className="relative w-full max-w-md animate-scale-in">
+        {/* Acrylic card */}
+        <div className="rounded-[1.75rem] border border-border/70 bg-card/70 backdrop-blur-2xl shadow-[0_24px_70px_-20px_rgba(0,0,0,0.35)] overflow-hidden">
+          {/* Title bar */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
+                <Icon name="CalendarClock" size={16} className="text-primary-foreground" />
+              </div>
+              <span className="text-sm font-medium text-foreground/90">DateFix</span>
+            </div>
+            <div className="flex items-center gap-3 text-muted-foreground">
+              <Icon name="Minus" size={15} />
+              <Icon name="Square" size={12} />
+              <Icon name="X" size={15} />
+            </div>
+          </div>
+
+          <div className="px-8 pt-9 pb-8 text-center">
+            <h1 className="font-display text-[1.7rem] leading-tight font-600 text-foreground">
+              Системная дата
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Установит дату Windows на 1 марта 2026
+            </p>
+
+            {/* Date display */}
+            <div className="mt-7 mb-8 animate-fade-in">
+              <div className="text-5xl font-display font-700 tabular-nums tracking-tight text-foreground">
+                {formatTime(displayDate)}
+              </div>
+              <div
+                className={`mt-2 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-colors ${
+                  applied
+                    ? 'bg-primary/15 text-primary'
+                    : 'bg-secondary text-secondary-foreground'
+                }`}
+              >
+                <Icon name="Calendar" size={14} />
+                {formatLong(displayDate)}
+              </div>
+            </div>
+
+            {/* Main button */}
+            <button
+              onClick={() => setApplied((v) => !v)}
+              className={`group w-full h-14 rounded-2xl font-display font-600 text-base text-primary-foreground bg-primary transition-all duration-300 hover:brightness-110 active:scale-[0.98] flex items-center justify-center gap-2.5 ${
+                applied ? '' : 'animate-glow-pulse'
+              }`}
+            >
+              {applied ? (
+                <>
+                  <Icon name="Check" size={20} className="animate-check-pop" />
+                  Дата установлена
+                </>
+              ) : (
+                <>
+                  <Icon name="Power" size={19} />
+                  Установить дату
+                </>
+              )}
+            </button>
+
+            {/* Autostart toggle */}
+            <button
+              onClick={() => setAutostart((v) => !v)}
+              className="mt-5 w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-secondary/60 hover:bg-secondary transition-colors text-left"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
+                  <Icon name="Rocket" size={18} className="text-primary" />
+                </div>
+                <div>
+                  <div className="text-sm font-medium text-foreground">Автозагрузка</div>
+                  <div className="text-xs text-muted-foreground">Запуск при включении ПК</div>
+                </div>
+              </div>
+              <span
+                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${
+                  autostart ? 'bg-primary' : 'bg-muted-foreground/40'
+                }`}
+              >
+                <span
+                  className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${
+                    autostart ? 'left-6' : 'left-1'
+                  }`}
+                />
+              </span>
+            </button>
+
+            <p className="mt-6 text-xs text-muted-foreground/80 flex items-center justify-center gap-1.5">
+              <Icon name="ShieldCheck" size={13} />
+              Адаптируется к теме Windows 11
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
