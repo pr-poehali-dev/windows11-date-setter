@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 
+const ZIP_URL = 'https://functions.poehali.dev/f06f9a3e-2953-4f70-9281-005e8f7cb7c5';
+
 const TARGET_DATE = new Date(2026, 2, 1);
 
 const formatLong = (d: Date) =>
@@ -13,6 +15,7 @@ const Index = () => {
   const [applied, setApplied] = useState(false);
   const [autostart, setAutostart] = useState(true);
   const [now, setNow] = useState(new Date());
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -20,6 +23,24 @@ const Index = () => {
   }, []);
 
   const displayDate = applied ? TARGET_DATE : now;
+
+  const downloadZip = async () => {
+    setDownloading(true);
+    try {
+      const res = await fetch(ZIP_URL);
+      const { filename, data } = await res.json();
+      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename || 'DateFix.zip';
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
@@ -117,6 +138,25 @@ const Index = () => {
                   }`}
                 />
               </span>
+            </button>
+
+            {/* Download installer */}
+            <button
+              onClick={downloadZip}
+              disabled={downloading}
+              className="mt-3 w-full h-12 rounded-2xl font-display font-600 text-sm text-foreground bg-secondary/60 hover:bg-secondary border border-border/60 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 disabled:opacity-60"
+            >
+              {downloading ? (
+                <>
+                  <Icon name="Loader" size={17} className="animate-spin" />
+                  Готовим архив…
+                </>
+              ) : (
+                <>
+                  <Icon name="Download" size={17} className="text-primary" />
+                  Скачать установщик (.zip)
+                </>
+              )}
             </button>
 
             <p className="mt-6 text-xs text-muted-foreground/80 flex items-center justify-center gap-1.5">

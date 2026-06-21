@@ -1,0 +1,15 @@
+{
+  "tests": [
+    {
+      "name": "Возвращает ZIP-архив",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "filename": "string",
+        "data": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
