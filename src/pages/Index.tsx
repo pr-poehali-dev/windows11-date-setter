@@ -1,237 +1,296 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 
-const ZIP_URL = 'https://functions.poehali.dev/f06f9a3e-2953-4f70-9281-005e8f7cb7c5';
+const STEPS = [
+  {
+    id: 1,
+    title: 'Установите KDE Connect на Windows',
+    description: 'Скачайте и установите приложение с Microsoft Store или с официального сайта.',
+    icon: 'Monitor',
+    color: 'bg-blue-500',
+    actions: [
+      {
+        label: 'Открыть Microsoft Store',
+        url: 'ms-windows-store://pdp/?productid=9N93MRMSXBF0',
+        primary: true,
+        icon: 'ExternalLink',
+      },
+      {
+        label: 'Скачать напрямую',
+        url: 'https://kdeconnect.kde.org/download.html',
+        primary: false,
+        icon: 'Download',
+      },
+    ],
+    note: 'Если Microsoft Store не открывается — используйте прямую ссылку на сайт KDE.',
+  },
+  {
+    id: 2,
+    title: 'Установите KDE Connect на Android',
+    description: 'Найдите приложение в Google Play Store на своём телефоне.',
+    icon: 'Smartphone',
+    color: 'bg-green-500',
+    actions: [
+      {
+        label: 'Google Play Store',
+        url: 'https://play.google.com/store/apps/details?id=org.kde.kdeconnect_tp',
+        primary: true,
+        icon: 'ExternalLink',
+      },
+    ],
+    note: 'Приложение бесплатное, весит около 15 МБ.',
+  },
+  {
+    id: 3,
+    title: 'Подключите оба устройства к одной Wi-Fi сети',
+    description: 'Убедитесь, что телефон и компьютер подключены к одному роутеру.',
+    icon: 'Wifi',
+    color: 'bg-purple-500',
+    actions: [],
+    note: 'Мобильный интернет (4G/5G) не подойдёт — нужна одна локальная Wi-Fi сеть.',
+  },
+  {
+    id: 4,
+    title: 'Найдите устройство и подтвердите сопряжение',
+    description: 'Откройте KDE Connect на ПК и на телефоне. Нажмите «Найти устройства» — ваш телефон появится в списке. Нажмите «Запросить сопряжение» и подтвердите запрос на телефоне.',
+    icon: 'Link',
+    color: 'bg-orange-500',
+    actions: [],
+    note: 'Если устройство не появляется — скорее всего мешает брандмауэр. Смотрите подсказку ниже.',
+  },
+  {
+    id: 5,
+    title: 'Готово! Включите нужные функции',
+    description: 'После сопряжения откройте настройки устройства в KDE Connect и включите нужные плагины: файлы, уведомления, буфер обмена, управление.',
+    icon: 'CheckCircle',
+    color: 'bg-emerald-500',
+    actions: [],
+    note: null,
+  },
+];
 
-const formatLong = (dateStr: string) => {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('ru-RU', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  });
-};
+const FEATURES = [
+  { icon: 'FolderOpen', label: 'Передача файлов', desc: 'Отправляйте фото, видео и любые файлы между ПК и телефоном без кабеля' },
+  { icon: 'MonitorSmartphone', label: 'Управление телефоном', desc: 'Управляйте телефоном с клавиатуры и мышки ПК' },
+  { icon: 'Bell', label: 'Уведомления', desc: 'Все уведомления с телефона появляются на экране компьютера' },
+  { icon: 'Clipboard', label: 'Буфер обмена', desc: 'Скопировали текст на телефоне — он уже на ПК, и наоборот' },
+  { icon: 'Phone', label: 'Голосовые вызовы', desc: 'ПК показывает входящие звонки и может приглушить музыку' },
+];
 
-const formatTime = (d: Date) =>
-  d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const FIREWALL_STEPS = [
+  'Откройте «Пуск» → «Безопасность Windows»',
+  'Перейдите в «Брандмауэр и защита сети»',
+  'Нажмите «Разрешить работу приложения через брандмауэр»',
+  'Найдите KDE Connect и поставьте галочки «Частная» и «Общедоступная»',
+  'Нажмите «ОК» и перезапустите KDE Connect',
+];
 
-const Toggle = ({
-  on, onToggle, color = 'bg-primary',
-}: { on: boolean; onToggle: () => void; color?: string }) => (
-  <span
-    onClick={onToggle}
-    className={`relative w-11 h-6 rounded-full transition-colors shrink-0 cursor-pointer ${on ? color : 'bg-muted-foreground/40'}`}
-  >
-    <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-all ${on ? 'left-6' : 'left-1'}`} />
-  </span>
-);
+export default function Index() {
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [showFirewall, setShowFirewall] = useState(false);
 
-const Index = () => {
-  const [targetDate, setTargetDate] = useState('2026-03-01');
-  const [applied, setApplied] = useState(false);
-  const [editingDate, setEditingDate] = useState(false);
-  const [autostart, setAutostart] = useState(true);
-  const [shutdown, setShutdown] = useState(true);
-  const [shutdownTime, setShutdownTime] = useState('23:30');
-  const [now, setNow] = useState(new Date());
-  const [downloading, setDownloading] = useState(false);
-
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
-
-  useEffect(() => {
-    setApplied(false);
-  }, [targetDate]);
-
-  const downloadZip = async () => {
-    setDownloading(true);
-    try {
-      const params = new URLSearchParams({
-        targetDate,
-        shutdownTime: shutdown ? shutdownTime : '',
-      });
-      const res = await fetch(`${ZIP_URL}?${params}`);
-      const { filename, data } = await res.json();
-      const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
-      const blob = new Blob([bytes], { type: 'application/zip' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename || 'DateFix.zip';
-      a.click();
-      URL.revokeObjectURL(url);
-    } finally {
-      setDownloading(false);
-    }
+  const toggleStep = (id: number) => {
+    setCompletedSteps((prev) =>
+      prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id]
+    );
   };
 
-  const displayTime = applied
-    ? (() => { const [y, m, d] = targetDate.split('-').map(Number); const dt = new Date(y, m - 1, d); dt.setHours(now.getHours(), now.getMinutes(), now.getSeconds()); return formatTime(dt); })()
-    : formatTime(now);
+  const progress = Math.round((completedSteps.length / STEPS.length) * 100);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-background">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-32 -left-32 w-[28rem] h-[28rem] rounded-full bg-primary/20 blur-[120px]" />
-        <div className="absolute -bottom-40 -right-24 w-[32rem] h-[32rem] rounded-full bg-accent/40 blur-[130px]" />
-      </div>
-
-      <div className="relative w-full max-w-md animate-scale-in">
-        <div className="rounded-[1.75rem] border border-border/70 bg-card/70 backdrop-blur-2xl shadow-[0_24px_70px_-20px_rgba(0,0,0,0.35)] overflow-hidden">
-          {/* Title bar */}
-          <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                <Icon name="CalendarClock" size={16} className="text-primary-foreground" />
-              </div>
-              <span className="text-sm font-medium text-foreground/90">DateFix</span>
-            </div>
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Icon name="Minus" size={15} />
-              <Icon name="Square" size={12} />
-              <Icon name="X" size={15} />
-            </div>
+    <div className="min-h-screen bg-background">
+      {/* Hero */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-purple-500/10 border-b border-border">
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+        </div>
+        <div className="relative max-w-4xl mx-auto px-6 py-16 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-6">
+            <Icon name="Wifi" size={15} />
+            Android + Windows 11 · через Wi-Fi · бесплатно
           </div>
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground leading-tight mb-4">
+            Подключи телефон<br />к компьютеру
+          </h1>
+          <p className="text-lg text-muted-foreground max-w-xl mx-auto mb-10">
+            Пошаговая инструкция по настройке{' '}
+            <span className="text-foreground font-semibold">KDE Connect</span> — передача файлов, уведомления, управление и звонки через Wi-Fi
+          </p>
 
-          <div className="px-8 pt-9 pb-8 text-center">
-            <h1 className="font-display text-[1.7rem] leading-tight font-600 text-foreground">
-              Системная дата
-            </h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Установит дату Windows при каждом включении ПК
-            </p>
-
-            {/* Clock + date display */}
-            <div className="mt-7 mb-6 animate-fade-in">
-              <div className="text-5xl font-display font-700 tabular-nums tracking-tight text-foreground">
-                {displayTime}
-              </div>
-
-              {/* Date badge — кликабельная */}
-              <button
-                onClick={() => setEditingDate((v) => !v)}
-                className={`mt-3 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-sm font-medium transition-all hover:brightness-95 active:scale-95 ${
-                  applied
-                    ? 'bg-primary/15 text-primary'
-                    : 'bg-secondary text-secondary-foreground'
-                }`}
-              >
-                <Icon name="Calendar" size={14} />
-                {applied ? formatLong(targetDate) : new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
-                <Icon name="ChevronDown" size={13} className={`transition-transform ${editingDate ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Date picker — раскрывается */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${editingDate ? 'max-h-24 opacity-100 mt-3' : 'max-h-0 opacity-0 mt-0'}`}>
-                <div className="flex items-center justify-center gap-3 bg-secondary/60 rounded-2xl px-4 py-3">
-                  <Icon name="CalendarDays" size={15} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm text-muted-foreground">Целевая дата:</span>
-                  <input
-                    type="date"
-                    value={targetDate}
-                    onChange={(e) => { setTargetDate(e.target.value); setEditingDate(false); }}
-                    className="ml-auto bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-display font-600 text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer"
-                  />
-                </div>
-              </div>
+          {/* Progress */}
+          <div className="max-w-sm mx-auto">
+            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+              <span>Прогресс установки</span>
+              <span className="font-medium">{completedSteps.length} из {STEPS.length}</span>
             </div>
-
-            {/* Main button */}
-            <button
-              onClick={() => setApplied((v) => !v)}
-              className={`group w-full h-14 rounded-2xl font-display font-600 text-base text-primary-foreground bg-primary transition-all duration-300 hover:brightness-110 active:scale-[0.98] flex items-center justify-center gap-2.5 ${
-                applied ? '' : 'animate-glow-pulse'
-              }`}
-            >
-              {applied ? (
-                <>
-                  <Icon name="Check" size={20} className="animate-check-pop" />
-                  Дата установлена
-                </>
-              ) : (
-                <>
-                  <Icon name="Power" size={19} />
-                  Установить {formatLong(targetDate)}
-                </>
-              )}
-            </button>
-
-            {/* Autostart toggle */}
-            <button
-              onClick={() => setAutostart((v) => !v)}
-              className="mt-5 w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-2xl bg-secondary/60 hover:bg-secondary transition-colors text-left"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
-                  <Icon name="Rocket" size={18} className="text-primary" />
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-foreground">Автозагрузка</div>
-                  <div className="text-xs text-muted-foreground">Запуск при включении ПК</div>
-                </div>
-              </div>
-              <Toggle on={autostart} onToggle={() => setAutostart(v => !v)} />
-            </button>
-
-            {/* Shutdown toggle + time picker */}
-            <div className="mt-3 rounded-2xl bg-secondary/60 overflow-hidden">
-              <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-card flex items-center justify-center shrink-0">
-                    <Icon name="PowerOff" size={18} className="text-destructive" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-medium text-foreground">Выключение по расписанию</div>
-                    <div className="text-xs text-muted-foreground">
-                      {shutdown ? `Ежедневно в ${shutdownTime}` : 'Отключено'}
-                    </div>
-                  </div>
-                </div>
-                <Toggle on={shutdown} onToggle={() => setShutdown(v => !v)} color="bg-destructive" />
-              </div>
-
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${shutdown ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
-                <div className="px-4 pb-4 pt-1 flex items-center gap-3 border-t border-border/40">
-                  <Icon name="Clock" size={15} className="text-muted-foreground shrink-0" />
-                  <span className="text-sm text-muted-foreground">Время выключения:</span>
-                  <input
-                    type="time"
-                    value={shutdownTime}
-                    onChange={(e) => setShutdownTime(e.target.value)}
-                    className="ml-auto bg-card border border-border rounded-xl px-3 py-1.5 text-sm font-display font-600 text-foreground focus:outline-none focus:ring-2 focus:ring-destructive/50 cursor-pointer"
-                  />
-                </div>
-              </div>
+            <div className="h-3 bg-secondary rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary rounded-full transition-all duration-500"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-
-            {/* Download installer */}
-            <button
-              onClick={downloadZip}
-              disabled={downloading}
-              className="mt-3 w-full h-12 rounded-2xl font-display font-600 text-sm text-foreground bg-secondary/60 hover:bg-secondary border border-border/60 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 disabled:opacity-60"
-            >
-              {downloading ? (
-                <>
-                  <Icon name="Loader" size={17} className="animate-spin" />
-                  Готовим архив…
-                </>
-              ) : (
-                <>
-                  <Icon name="Download" size={17} className="text-primary" />
-                  Скачать установщик (.zip)
-                </>
-              )}
-            </button>
-
-            <p className="mt-6 text-xs text-muted-foreground/80 flex items-center justify-center gap-1.5">
-              <Icon name="ShieldCheck" size={13} />
-              Адаптируется к теме Windows 11
-            </p>
+            {progress === 100 && (
+              <p className="mt-3 text-sm text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-1.5">
+                <Icon name="CheckCircle" size={15} />
+                Готово! Устройства подключены
+              </p>
+            )}
           </div>
         </div>
       </div>
+
+      <div className="max-w-4xl mx-auto px-6 py-12 space-y-12">
+
+        {/* Features grid */}
+        <div>
+          <h2 className="text-xl font-bold text-foreground mb-5 flex items-center gap-2">
+            <Icon name="Sparkles" size={20} className="text-primary" />
+            Что будет работать после подключения
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {FEATURES.map((f) => (
+              <div
+                key={f.label}
+                className="flex items-start gap-3 p-4 rounded-2xl bg-card border border-border hover:border-primary/40 hover:shadow-sm transition-all"
+              >
+                <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                  <Icon name={f.icon} size={18} className="text-primary" />
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-foreground">{f.label}</div>
+                  <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div>
+          <h2 className="text-xl font-bold text-foreground mb-5 flex items-center gap-2">
+            <Icon name="ListChecks" size={20} className="text-primary" />
+            Пошаговая инструкция
+          </h2>
+          <div className="space-y-3">
+            {STEPS.map((step, idx) => {
+              const done = completedSteps.includes(step.id);
+              return (
+                <div
+                  key={step.id}
+                  className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                    done
+                      ? 'border-emerald-400/40 bg-emerald-500/5'
+                      : 'border-border bg-card'
+                  }`}
+                >
+                  <div className="flex items-start gap-4 p-5">
+                    {/* Checkbox */}
+                    <button
+                      onClick={() => toggleStep(step.id)}
+                      title={done ? 'Отметить как невыполненное' : 'Отметить как выполненное'}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all font-bold text-sm border-2 mt-0.5 ${
+                        done
+                          ? 'bg-emerald-500 border-emerald-500 text-white'
+                          : 'border-border text-muted-foreground hover:border-primary hover:text-primary'
+                      }`}
+                    >
+                      {done ? <Icon name="Check" size={16} /> : idx + 1}
+                    </button>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className={`w-6 h-6 rounded-lg ${step.color} flex items-center justify-center shrink-0`}>
+                          <Icon name={step.icon} size={13} className="text-white" />
+                        </div>
+                        <h3 className={`font-semibold text-base leading-snug ${done ? 'line-through text-muted-foreground' : 'text-foreground'}`}>
+                          {step.title}
+                        </h3>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-3">
+                        {step.description}
+                      </p>
+
+                      {step.actions.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {step.actions.map((a) => (
+                            <a
+                              key={a.label}
+                              href={a.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium transition-all hover:brightness-110 active:scale-95 ${
+                                a.primary
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-secondary text-secondary-foreground border border-border'
+                              }`}
+                            >
+                              <Icon name={a.icon} size={14} />
+                              {a.label}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      {step.note && (
+                        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-secondary/60 rounded-xl px-3 py-2.5">
+                          <Icon name="Info" size={13} className="shrink-0 mt-0.5 text-primary" />
+                          {step.note}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Firewall accordion */}
+        <div className="rounded-2xl border border-orange-400/30 bg-orange-500/5 overflow-hidden">
+          <button
+            onClick={() => setShowFirewall((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-orange-500/5 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-orange-500/15 flex items-center justify-center shrink-0">
+                <Icon name="ShieldAlert" size={18} className="text-orange-500" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">Телефон не виден в списке?</div>
+                <div className="text-xs text-muted-foreground">Разрешите KDE Connect в брандмауэре Windows</div>
+              </div>
+            </div>
+            <Icon
+              name="ChevronDown"
+              size={18}
+              className={`text-muted-foreground transition-transform duration-300 shrink-0 ${showFirewall ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showFirewall ? 'max-h-80' : 'max-h-0'}`}>
+            <div className="px-5 pb-5 pt-4 border-t border-orange-400/20 space-y-3">
+              {FIREWALL_STEPS.map((s, i) => (
+                <div key={i} className="flex items-start gap-3 text-sm text-foreground">
+                  <span className="w-5 h-5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">
+                    {i + 1}
+                  </span>
+                  {s}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center pb-6">
+          <p className="text-sm text-muted-foreground flex items-center justify-center gap-1.5">
+            <Icon name="Heart" size={13} className="text-red-400" />
+            KDE Connect — бесплатное приложение с открытым исходным кодом
+          </p>
+        </div>
+
+      </div>
     </div>
   );
-};
-
-export default Index;
+}
