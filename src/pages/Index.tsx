@@ -77,6 +77,40 @@ const FEATURES = [
   { icon: 'Phone', label: 'Голосовые вызовы', desc: 'ПК показывает входящие звонки и может приглушить музыку' },
 ];
 
+const CALL_STEPS = [
+  {
+    icon: 'Smartphone',
+    title: 'Откройте KDE Connect на телефоне',
+    desc: 'Зайдите в настройки подключённого ПК и нажмите «Плагины».',
+  },
+  {
+    icon: 'PhoneCall',
+    title: 'Включите плагин «Уведомления о звонках»',
+    desc: 'Найдите «Telephone Integration» или «Уведомления о звонках» и активируйте его.',
+  },
+  {
+    icon: 'Volume2',
+    title: 'Включите приглушение звука на ПК',
+    desc: 'В том же разделе активируйте «Приглушать/ставить на паузу медиа при звонке» — музыка и видео будут замолкать при входящем.',
+  },
+  {
+    icon: 'Monitor',
+    title: 'На ПК разрешите уведомления KDE Connect',
+    desc: 'В Windows: Параметры → Система → Уведомления → найдите KDE Connect и включите уведомления.',
+  },
+  {
+    icon: 'CheckCircle',
+    title: 'Готово — позвоните себе для проверки',
+    desc: 'Попросите кого-нибудь позвонить: на ПК появится всплывающее уведомление с именем звонящего и кнопкой отклонить.',
+  },
+];
+
+const CALL_LIMIT_ITEMS = [
+  { icon: 'VolumeX', text: 'Слышать разговор через колонки ПК нельзя — звук по-прежнему идёт через телефон' },
+  { icon: 'PhoneOff', text: 'Принять звонок с ПК нельзя — только увидеть уведомление и отклонить' },
+  { icon: 'Bluetooth', text: 'Для полного перенаправления звука нужна Bluetooth-гарнитура, подключённая к ПК' },
+];
+
 const FIREWALL_STEPS = [
   'Откройте «Пуск» → «Безопасность Windows»',
   'Перейдите в «Брандмауэр и защита сети»',
@@ -88,6 +122,7 @@ const FIREWALL_STEPS = [
 export default function Index() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [showFirewall, setShowFirewall] = useState(false);
+  const [showCalls, setShowCalls] = useState(false);
 
   const toggleStep = (id: number) => {
     setCompletedSteps((prev) =>
@@ -244,6 +279,59 @@ export default function Index() {
                 </div>
               );
             })}
+          </div>
+        </div>
+
+        {/* Calls accordion */}
+        <div className="rounded-2xl border border-primary/30 bg-primary/5 overflow-hidden">
+          <button
+            onClick={() => setShowCalls((v) => !v)}
+            className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-primary/5 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0">
+                <Icon name="PhoneCall" size={18} className="text-primary" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">Переадресация звонков на ПК</div>
+                <div className="text-xs text-muted-foreground">Уведомления о входящих звонках и приглушение звука</div>
+              </div>
+            </div>
+            <Icon
+              name="ChevronDown"
+              size={18}
+              className={`text-muted-foreground transition-transform duration-300 shrink-0 ${showCalls ? 'rotate-180' : ''}`}
+            />
+          </button>
+          <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showCalls ? 'max-h-[600px]' : 'max-h-0'}`}>
+            <div className="px-5 pb-5 pt-4 border-t border-primary/20 space-y-4">
+
+              {/* Steps */}
+              <div className="space-y-3">
+                {CALL_STEPS.map((s, i) => (
+                  <div key={i} className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon name={s.icon} size={15} className="text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-foreground leading-snug">{s.title}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Limitations */}
+              <div className="rounded-xl bg-secondary/60 px-4 py-3 space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Важно понимать</div>
+                {CALL_LIMIT_ITEMS.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <Icon name={item.icon} size={13} className="shrink-0 mt-0.5 text-orange-500" />
+                    {item.text}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
